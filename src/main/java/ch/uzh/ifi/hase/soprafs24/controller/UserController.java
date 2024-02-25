@@ -73,7 +73,7 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
-    @GetMapping("/user/{username}")
+    @GetMapping("/users/{username}")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public UserGetDTO getUserProfile(@PathVariable String username) {
@@ -89,7 +89,7 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
-    @PutMapping("/user/{username}")
+    @PutMapping("/users/{username}")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public UserGetDTO updateUserProfile(
