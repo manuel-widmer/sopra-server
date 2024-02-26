@@ -105,6 +105,7 @@ public class UserController {
         }
 
         // Update user properties
+        existingUser.setUsername(userPutDTO.getUsername());
         existingUser.setBirthDate(userPutDTO.getBirthDate());
 
         // Save the updated user
