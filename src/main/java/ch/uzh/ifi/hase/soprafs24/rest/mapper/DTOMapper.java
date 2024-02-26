@@ -23,9 +23,14 @@ public interface DTOMapper {
 
     DTOMapper INSTANCE = Mappers.getMapper(DTOMapper.class);
 
+    @Mapping(source = "id", target = "id")
     @Mapping(source = "name", target = "name")
     @Mapping(source = "username", target = "username")
+    @Mapping(source = "status", target = "status")
+    @Mapping(source = "creationDate", target = "creationDate")  // ADDED
+    @Mapping(source = "birthDate", target = "birthDate")  // ADDED
     User convertUserPostDTOtoEntity(UserPostDTO userPostDTO);
+    // Send user info as DTO from frontend to backend and stores it as database entity
 
     @Mapping(source = "id", target = "id")
     @Mapping(source = "name", target = "name")
@@ -34,8 +39,15 @@ public interface DTOMapper {
     @Mapping(source = "creationDate", target = "creationDate")  // ADDED
     @Mapping(source = "birthDate", target = "birthDate")  // ADDED
     UserGetDTO convertEntityToUserGetDTO(User user);
+    // Retrieves info from database entity and sends it to the frontend as DTO
 
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "name", target = "name")
+    @Mapping(source = "username", target = "username")
+    @Mapping(source = "status", target = "status")
+    @Mapping(source = "creationDate", target = "creationDate")  // ADDED
     @Mapping(source = "birthDate", target = "birthDate")  // ADDED
-    UserPutDTO convertUserToUserPutDTO(User user);  // ADDED
+    User convertUserPutDTOtoEntity(UserPutDTO userPutDTO);  // ADDED
+    // Retrieves info from database entry and sends it to the frontend as DTO
 
 }

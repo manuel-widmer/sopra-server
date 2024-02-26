@@ -93,6 +93,11 @@ public class UserService {
         return userRepository.findByUsername(username);
     }
 
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElse(null);
+    }
+
     public User updateUser(User updatedUser) {
         // Check if the user exists
         User existingUser = userRepository.findById(updatedUser.getId())

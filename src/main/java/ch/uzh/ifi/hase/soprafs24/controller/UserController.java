@@ -46,7 +46,7 @@ public class UserController {
         return userGetDTOs;
     }
 
-    @PostMapping("/users")
+    @PostMapping("/users/registration")
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public UserGetDTO createUser(@RequestBody UserPostDTO userPostDTO) {
@@ -62,7 +62,7 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
     }
     
-    @PostMapping("/login")
+    @PostMapping("/users/login")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public UserGetDTO login(@RequestBody UserPostDTO userPostDTO) {
@@ -73,12 +73,12 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
-    @GetMapping("/users/{username}")
+    @GetMapping("/users/{id}")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public UserGetDTO getUserProfile(@PathVariable String username) {
+    public UserGetDTO getUserProfile(@PathVariable Long id) {
         // Fetch the user by username
-        User user = userService.getUserByUsername(username);
+        User user = userService.getUserById(id);
 
         // Check if the user exists, throw a 404 if not
         if (user == null) {
@@ -89,15 +89,15 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
-    @PutMapping("/users/{username}")
+    @PutMapping("/users/{id}")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public UserGetDTO updateUserProfile(
-            @PathVariable String username,
+            @PathVariable Long id,
             @RequestBody UserPutDTO userPutDTO
     ) {
         // Fetch the user by username
-        User existingUser = userService.getUserByUsername(username);
+        User existingUser = userService.getUserById(id);
 
         // Check if the user exists, throw a 404 if not
         if (existingUser == null) {
