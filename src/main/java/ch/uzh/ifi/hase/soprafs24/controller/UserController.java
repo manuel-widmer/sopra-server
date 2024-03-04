@@ -31,6 +31,7 @@ public class UserController {
         this.userService = userService;
     }
 
+    // TEST STATUS: TEST IMPLEMENTED FOR GETTING ALL USERS
     @GetMapping("/users")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
@@ -46,6 +47,7 @@ public class UserController {
         return userGetDTOs;
     }
 
+    // TEST STATUS: TEST IMPLEMENTED FOR CORRECT REGISTRATION FUNCTIONALITY
     @PostMapping("/users/registration")
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
@@ -61,7 +63,9 @@ public class UserController {
         // convert internal representation of user back to API
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
     }
-    
+
+    // TEST STATUS: TEST IMPLEMENTED FOR SUCCESSFUL LOGIN
+    // TEST STATUS: TEST IMPLEMENTED FOR UNSUCCESSFUL LOGIN DUE TO WRONG PASSWORD
     @PostMapping("/users/login")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
@@ -73,6 +77,7 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
+    // TEST STATUS: IMPLEMENTED
     @GetMapping("/users/{id}")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
@@ -89,8 +94,9 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
+    // TODO: TEST STATUS: TEST TO BE IMPLEMENTED
     @PutMapping("/users/{id}")
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @ResponseBody
     public UserGetDTO updateUserProfile(
             @PathVariable Long id,
@@ -111,6 +117,7 @@ public class UserController {
         // Save the updated user
         User updatedUser = userService.updateUser(existingUser);
 
+        // TODO: IS THE OUTPUT BELOW NEEDED OR DOES IT VIOLATE THE REST PROTOCOL (204 = NO_CONTENT)?
         // Convert the updated user to the API representation
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(updatedUser);
     }

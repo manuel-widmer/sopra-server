@@ -3,6 +3,7 @@ package ch.uzh.ifi.hase.soprafs24.controller;
 import ch.uzh.ifi.hase.soprafs24.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs24.entity.User;
 import ch.uzh.ifi.hase.soprafs24.rest.dto.UserPostDTO;
+import ch.uzh.ifi.hase.soprafs24.rest.dto.UserPutDTO; // ADDED
 import ch.uzh.ifi.hase.soprafs24.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,12 +20,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Date; // ADDED
+import java.text.SimpleDateFormat; // ADDED
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -43,7 +47,8 @@ public class UserControllerTest {
   @MockBean
   private UserService userService;
 
-  @Test
+  // THIS TEST (ALREADY EXISTING) CHECKS A QUERY OF ALL USERS (@GetMapping("/users")
+    @Test
   public void givenUsers_whenGetUsers_thenReturnJsonArray() throws Exception {
     // given
     User user = new User();
@@ -68,6 +73,7 @@ public class UserControllerTest {
         .andExpect(jsonPath("$[0].status", is(user.getStatus().toString())));
   }
 
+  // THIS TEST (ALREADY EXISTING) CHECKS THE REGISTRATION FUNCTIONALITY (@PostMapping("/users/registration")
   @Test
   public void createUser_validInput_userCreated() throws Exception {
     // given
@@ -98,7 +104,192 @@ public class UserControllerTest {
         .andExpect(jsonPath("$.status", is(user.getStatus().toString())));
   }
 
-  /**
+    // THIS TEST (ADDED BY MYSELF) CHECKS WHETHER TRYING TO ADD AN EXISTING USER FOR THE SECOND TIME WILL THROW A 409 ERROR (@PostMapping("/users/registration")
+    @Test
+    public void createUser_duplicateUser_conflict() throws Exception {
+        // given
+        User existingUser = new User();
+        existingUser.setId(1L);
+        existingUser.setName("Test User");
+        existingUser.setUsername("testUsername");
+        existingUser.setToken("1");
+        existingUser.setStatus(UserStatus.ONLINE);
+
+        UserPostDTO userPostDTO = new UserPostDTO();
+        userPostDTO.setName("Test User");
+        userPostDTO.setUsername("testUsername");
+
+        // Mock the behavior to return an existing user for the given input
+        given(userService.createUser(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.CONFLICT, "User already exists"));
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder postRequest = post("/users/registration")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(userPostDTO));
+
+        // then
+        mockMvc.perform(postRequest)
+                .andExpect(status().isConflict()); // Expecting Conflict status
+    }
+
+    // THIS TEST (ADDED BY MYSELF) CHECKS THE LOGIN FUNCTIONALITY WITH CORRECT LOGIN CREDENTIALS (@PostMapping("/users/login")
+    @Test
+    public void loginUser_validInput_userLoggedIn() throws Exception {
+        // given
+        User user = new User();
+        user.setId(1L);
+        user.setName("1234");
+        user.setUsername("Michael");
+        user.setToken("1");
+        user.setStatus(UserStatus.ONLINE);
+
+        UserPostDTO userPostDTO = new UserPostDTO();
+        userPostDTO.setName("1234");
+        userPostDTO.setUsername("Michael");
+
+        // Mock the behavior for valid login credentials
+        given(userService.checkLoginCredentials(Mockito.any())).willReturn(user);
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder postRequest = post("/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(userPostDTO));
+
+        // then
+        mockMvc.perform(postRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(user.getId().intValue())))
+                .andExpect(jsonPath("$.name", is(user.getName())))
+                .andExpect(jsonPath("$.username", is(user.getUsername())))
+                .andExpect(jsonPath("$.status", is(user.getStatus().toString())));
+    }
+
+    // THIS TEST (ADDED BY MYSELF) CHECKS THE LOGIN FUNCTIONALITY WITH INCORRECT LOGIN CREDENTIALS (@PostMapping("/users/login")
+    @Test
+    public void loginUser_invalidInput_unauthorized() throws Exception {
+        // given
+        User user = new User();
+        user.setId(1L);
+        user.setName("1234");
+        user.setUsername("Michael");
+        user.setToken("1");
+        user.setStatus(UserStatus.ONLINE);
+
+        UserPostDTO userPostDTO = new UserPostDTO();
+        userPostDTO.setName("abcd");
+        userPostDTO.setUsername("Michael");
+
+        // Mock the behavior for invalid login credentials
+        given(userService.checkLoginCredentials(Mockito.any())).willReturn(null);
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder postRequest = post("/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(userPostDTO));
+
+        // then
+        mockMvc.perform(postRequest)
+                .andExpect(status().isUnauthorized()); // Expecting Unauthorized status
+    }
+
+    // THIS TEST (ADDED BY MYSELF) CHECKS WHETHER EXISTING USERS ARE CORRECTLY RETURNED FROM THE DB (@GetMapping("/users/{id}")
+    @Test
+    public void getUserProfile_existingUser_userProfileReturned() throws Exception {
+        // given
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+        user.setUsername("testUsername");
+        user.setToken("1");
+        user.setStatus(UserStatus.ONLINE);
+
+        // Mock the behavior to return the user for the given ID
+        given(userService.getUserById(1L)).willReturn(user);
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder getRequest = get("/users/{id}", 1L)
+                .contentType(MediaType.APPLICATION_JSON);
+
+        // then
+        mockMvc.perform(getRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(user.getId().intValue())))
+                .andExpect(jsonPath("$.name", is(user.getName())))
+                .andExpect(jsonPath("$.username", is(user.getUsername())))
+                .andExpect(jsonPath("$.status", is(user.getStatus().toString())));
+    }
+
+    // THIS TEST (ADDED BY MYSELF) CHECKS NON-EXISTING USERS THROW THE EXPECTED 404 ERROR (@GetMapping("/users/{id}")
+    @Test
+    public void getUserProfile_nonExistingUser_notFound() throws Exception {
+        // given: no need to mock any behavior as the user does not exist
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder getRequest = get("/users/{id}", 1L)
+                .contentType(MediaType.APPLICATION_JSON);
+
+        // then
+        mockMvc.perform(getRequest)
+                .andExpect(status().isNotFound()); // Expecting Not Found status
+    }
+
+    @Test
+    public void updateUserProfile_existingUser_profileUpdated() throws Exception {
+
+        // Existing user data
+        User existingUser = new User();
+        existingUser.setId(1L);
+        existingUser.setName("Test User");
+        existingUser.setUsername("testUsername");
+        existingUser.setBirthDate(null);
+
+        // User data for update
+        UserPutDTO userPutDTO = new UserPutDTO();
+        userPutDTO.setUsername("newUsername");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date birthDate = sdf.parse("2000-01-01");
+        userPutDTO.setBirthDate(birthDate);
+
+        // Mock the behavior to return the existing user
+        given(userService.getUserById(1L)).willReturn(existingUser);
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder putRequest = put("/users/{id}", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(userPutDTO));
+
+        // then
+        mockMvc.perform(putRequest)
+                .andExpect(status().isNoContent()); // Expecting No Content status
+        // Additional assertions can be added to check the updated user properties in the database
+    }
+
+    @Test
+    public void updateUserProfile_nonExistingUser_notFound() throws Exception {
+        // given
+        Long nonExistingUserId = 99L;
+
+        // User data for update
+        UserPutDTO userPutDTO = new UserPutDTO();
+        userPutDTO.setUsername("newUsername");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date birthDate = sdf.parse("2000-01-01");
+        userPutDTO.setBirthDate(birthDate);
+
+        // Mock the behavior to return null, indicating non-existing user
+        given(userService.getUserById(nonExistingUserId)).willReturn(null);
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder putRequest = put("/users/{id}", nonExistingUserId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(userPutDTO));
+
+        // then
+        mockMvc.perform(putRequest)
+                .andExpect(status().isNotFound()); // Expecting Not Found status
+    }
+
+    /**
    * Helper Method to convert userPostDTO into a JSON string such that the input
    * can be processed
    * Input will look like this: {"name": "Test User", "username": "testUsername"}
