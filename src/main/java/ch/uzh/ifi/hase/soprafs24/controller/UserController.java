@@ -1,6 +1,7 @@
 package ch.uzh.ifi.hase.soprafs24.controller;
 
 import ch.uzh.ifi.hase.soprafs24.entity.User;
+import ch.uzh.ifi.hase.soprafs24.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs24.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs24.rest.dto.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs24.rest.dto.UserPutDTO;
@@ -9,6 +10,7 @@ import ch.uzh.ifi.hase.soprafs24.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DuplicateKeyException; // ADDED
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,17 +54,24 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public UserGetDTO createUser(@RequestBody UserPostDTO userPostDTO) {
-        // convert API user to internal representation
-        User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
+        try {
+            // Convert API user to internal representation
+            User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
 
-        // set creation date
-        userInput.setCreationDate(new Date());
+            // Set creation date
+            userInput.setCreationDate(new Date());
 
-        // create user
-        User createdUser = userService.createUser(userInput);
-        // convert internal representation of user back to API
-        return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
+            // Create user
+            User createdUser = userService.createUser(userInput);
+
+            // Convert internal representation of user back to API
+            return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
+        } catch (DuplicateKeyException e) {
+            // Handle the case where the user already exists
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists", e);
+        }
     }
+
 
     // TEST STATUS: TEST IMPLEMENTED FOR SUCCESSFUL LOGIN
     // TEST STATUS: TEST IMPLEMENTED FOR UNSUCCESSFUL LOGIN DUE TO WRONG PASSWORD
@@ -74,7 +83,26 @@ public class UserController {
         if(user==null || !user.getName().equals(userPostDTO.getName())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
+        userService.updateStatus(user, UserStatus.ONLINE);
+
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
+    }
+
+    @PostMapping("/users/logout")
+    @ResponseStatus(HttpStatus.OK)
+    public void logout(@RequestBody UserPostDTO userPostDTO) {
+        Long id = userPostDTO.getId();
+
+        // Fetch the user by userId
+        User user = userService.getUserById(id);
+
+        // Check if the user exists, throw a 404 if not
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
+        // Update user status to OFFLINE
+        userService.updateStatus(user, UserStatus.OFFLINE);
     }
 
     // TEST STATUS: IMPLEMENTED
@@ -94,7 +122,7 @@ public class UserController {
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
 
-    // TODO: TEST STATUS: TEST TO BE IMPLEMENTED
+    // TEST STATUS: IMPLEMENTED
     @PutMapping("/users/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @ResponseBody
