@@ -81,27 +81,38 @@ public class UserService {
     public User checkLoginCredentials(UserPostDTO userPostDTO) {
         // Retrieve the user from the database by username
         User existingUser = userRepository.findByUsername(userPostDTO.getUsername());
-        // Check if the user exists and the password matches
-        if (existingUser != null && existingUser.getName().equals(userPostDTO.getName())) {
-            return existingUser; // Login credentials are valid
+
+        // Check if the user exists
+        if (existingUser != null) {
+            // Check if the password matches
+            if (existingUser.getName().equals(userPostDTO.getName())) {
+                return existingUser; // Login credentials are valid
+            } else {
+                throwUnauthorizedException("Wrong password");
+            }
         } else {
-            return null; // Login credentials are invalid
+            throwNotFoundException("User not found");
         }
+        // The return statement is needed for compilation, but it will not be reached
+        return existingUser;
     }
 
+    public void throwNotFoundException(String message) {
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, message);
+    }
+
+    public void throwUnauthorizedException(String message) {
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, message);
+    }
 
     public User updateStatus(User user, UserStatus status) {
         user.setStatus(status);
         return userRepository.save(user);
     }
 
-    public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
     public User getUserById(Long id) {
         return userRepository.findById(id)
-                .orElse(null);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     public User updateUser(User updatedUser) {

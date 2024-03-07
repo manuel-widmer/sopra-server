@@ -8,9 +8,8 @@ import ch.uzh.ifi.hase.soprafs24.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs24.rest.mapper.DTOMapper;
 import ch.uzh.ifi.hase.soprafs24.service.UserService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.dao.DuplicateKeyException; // ADDED
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,22 +53,17 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public UserGetDTO createUser(@RequestBody UserPostDTO userPostDTO) {
-        try {
-            // Convert API user to internal representation
-            User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
+        // Convert API user to internal representation
+        User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
 
-            // Set creation date
-            userInput.setCreationDate(new Date());
+        // Set creation date
+        userInput.setCreationDate(new Date());
 
-            // Create user
-            User createdUser = userService.createUser(userInput);
+        // Create user
+        User createdUser = userService.createUser(userInput);
 
-            // Convert internal representation of user back to API
-            return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
-        } catch (DuplicateKeyException e) {
-            // Handle the case where the user already exists
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists", e);
-        }
+        // Convert internal representation of user back to API
+        return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
     }
 
 
@@ -80,9 +74,7 @@ public class UserController {
     @ResponseBody
     public UserGetDTO login(@RequestBody UserPostDTO userPostDTO) {
         User user = userService.checkLoginCredentials(userPostDTO);
-        if(user==null || !user.getName().equals(userPostDTO.getName())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
-        }
+
         userService.updateStatus(user, UserStatus.ONLINE);
 
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
@@ -96,11 +88,6 @@ public class UserController {
         // Fetch the user by userId
         User user = userService.getUserById(id);
 
-        // Check if the user exists, throw a 404 if not
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
-        }
-
         // Update user status to OFFLINE
         userService.updateStatus(user, UserStatus.OFFLINE);
     }
@@ -113,11 +100,6 @@ public class UserController {
         // Fetch the user by username
         User user = userService.getUserById(id);
 
-        // Check if the user exists, throw a 404 if not
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
-        }
-
         // Convert the user to the API representation
         return DTOMapper.INSTANCE.convertEntityToUserGetDTO(user);
     }
@@ -126,16 +108,16 @@ public class UserController {
     @PutMapping("/users/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @ResponseBody
-    public UserGetDTO updateUserProfile(
+    public ResponseEntity<UserGetDTO> updateUserProfile(
             @PathVariable Long id,
             @RequestBody UserPutDTO userPutDTO
     ) {
         // Fetch the user by username
         User existingUser = userService.getUserById(id);
 
-        // Check if the user exists, throw a 404 if not
+        // Check if the user exists
         if (existingUser == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+            return ResponseEntity.notFound().build();
         }
 
         // Update user properties
@@ -145,9 +127,9 @@ public class UserController {
         // Save the updated user
         User updatedUser = userService.updateUser(existingUser);
 
-        // TODO: IS THE OUTPUT BELOW NEEDED OR DOES IT VIOLATE THE REST PROTOCOL (204 = NO_CONTENT)?
         // Convert the updated user to the API representation
-        return DTOMapper.INSTANCE.convertEntityToUserGetDTO(updatedUser);
+        return ResponseEntity.noContent().build();
     }
+
 
 }

@@ -164,23 +164,16 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.status", is(user.getStatus().toString())));
     }
 
-    // THIS TEST (ADDED BY MYSELF) CHECKS THE LOGIN FUNCTIONALITY WITH INCORRECT LOGIN CREDENTIALS (@PostMapping("/users/login")
+    // THIS TEST (ADDED BY MYSELF) CHECKS THE LOGIN FUNCTIONALITY WITH NON-EXISTING LOGIN CREDENTIALS (@PostMapping("/users/login")
     @Test
-    public void loginUser_invalidInput_unauthorized() throws Exception {
+    public void loginUser_notRegisteredUser_notFound() throws Exception {
         // given
-        User user = new User();
-        user.setId(1L);
-        user.setName("1234");
-        user.setUsername("Michael");
-        user.setToken("1");
-        user.setStatus(UserStatus.ONLINE);
-
         UserPostDTO userPostDTO = new UserPostDTO();
-        userPostDTO.setName("abcd");
-        userPostDTO.setUsername("Michael");
+        userPostDTO.setName("1234");
+        userPostDTO.setUsername("NonExistentUser");
 
-        // Mock the behavior for invalid login credentials
-        given(userService.checkLoginCredentials(Mockito.any())).willReturn(null);
+        // Mock the behavior for user not found
+        given(userService.checkLoginCredentials(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         // when/then -> do the request + validate the result
         MockHttpServletRequestBuilder postRequest = post("/users/login")
@@ -189,7 +182,34 @@ public class UserControllerTest {
 
         // then
         mockMvc.perform(postRequest)
-                .andExpect(status().isUnauthorized()); // Expecting Unauthorized status
+                .andExpect(status().isNotFound());
+    }
+
+    // THIS TEST (ADDED BY MYSELF) CHECKS THE LOGIN FUNCTIONALITY WITH INCORRECT LOGIN CREDENTIALS (@PostMapping("/users/login")
+    @Test
+    public void loginUser_wrongPassword_unauthorized() throws Exception {
+        // given
+        User existingUser = new User();
+        existingUser.setId(1L);
+        existingUser.setName("CorrectPassword");
+        existingUser.setUsername("Michael");
+        existingUser.setToken("1");
+        existingUser.setStatus(UserStatus.ONLINE);
+
+        UserPostDTO userPostDTO = new UserPostDTO();
+        userPostDTO.setName("WrongPassword"); // Wrong password
+
+        // Mock the behavior for wrong password
+        given(userService.checkLoginCredentials(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password"));
+
+        // when/then -> do the request + validate the result
+        MockHttpServletRequestBuilder postRequest = post("/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(userPostDTO));
+
+        // then
+        mockMvc.perform(postRequest)
+                .andExpect(status().isUnauthorized());
     }
 
     // THIS TEST (ADDED BY MYSELF) CHECKS WHETHER EXISTING USERS ARE CORRECTLY RETURNED FROM THE DB (@GetMapping("/users/{id}")
@@ -222,20 +242,24 @@ public class UserControllerTest {
     // THIS TEST (ADDED BY MYSELF) CHECKS NON-EXISTING USERS THROW THE EXPECTED 404 ERROR (@GetMapping("/users/{id}")
     @Test
     public void getUserProfile_nonExistingUser_notFound() throws Exception {
-        // given: no need to mock any behavior as the user does not exist
+        // given
+        long nonExistingUserId = 2L;
+
+        // Mock the behavior to throw a 404 Not Found for the non-existing user ID
+        given(userService.getUserById(nonExistingUserId))
+                .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         // when/then -> do the request + validate the result
-        MockHttpServletRequestBuilder getRequest = get("/users/{id}", 1L)
+        MockHttpServletRequestBuilder getRequest = get("/users/{id}", nonExistingUserId)
                 .contentType(MediaType.APPLICATION_JSON);
 
         // then
         mockMvc.perform(getRequest)
-                .andExpect(status().isNotFound()); // Expecting Not Found status
+                .andExpect(status().isNotFound());
     }
 
     @Test
     public void updateUserProfile_existingUser_profileUpdated() throws Exception {
-
         // Existing user data
         User existingUser = new User();
         existingUser.setId(1L);
@@ -253,6 +277,9 @@ public class UserControllerTest {
         // Mock the behavior to return the existing user
         given(userService.getUserById(1L)).willReturn(existingUser);
 
+        // Mock the behavior to return the updated user after the update
+        given(userService.updateUser(Mockito.any())).willReturn(existingUser);
+
         // when/then -> do the request + validate the result
         MockHttpServletRequestBuilder putRequest = put("/users/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -260,33 +287,31 @@ public class UserControllerTest {
 
         // then
         mockMvc.perform(putRequest)
-                .andExpect(status().isNoContent()); // Expecting No Content status
+                .andExpect(status().isNoContent());
+
         // Additional assertions can be added to check the updated user properties in the database
     }
 
     @Test
     public void updateUserProfile_nonExistingUser_notFound() throws Exception {
-        // given
-        Long nonExistingUserId = 99L;
-
-        // User data for update
+        // Non-existing user data
         UserPutDTO userPutDTO = new UserPutDTO();
         userPutDTO.setUsername("newUsername");
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         Date birthDate = sdf.parse("2000-01-01");
         userPutDTO.setBirthDate(birthDate);
 
-        // Mock the behavior to return null, indicating non-existing user
-        given(userService.getUserById(nonExistingUserId)).willReturn(null);
+        // Mock the behavior to return null for a non-existing user
+        given(userService.getUserById(1L)).willReturn(null);
 
         // when/then -> do the request + validate the result
-        MockHttpServletRequestBuilder putRequest = put("/users/{id}", nonExistingUserId)
+        MockHttpServletRequestBuilder putRequest = put("/users/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPutDTO));
 
         // then
         mockMvc.perform(putRequest)
-                .andExpect(status().isNotFound()); // Expecting Not Found status
+                .andExpect(status().isNotFound());
     }
 
     /**
