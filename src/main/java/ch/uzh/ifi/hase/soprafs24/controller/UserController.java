@@ -125,7 +125,7 @@ public class UserController {
         existingUser.setBirthDate(userPutDTO.getBirthDate());
 
         // Save the updated user
-        User updatedUser = userService.updateUser(existingUser);
+        userService.updateUser(existingUser);
 
         // Convert the updated user to the API representation
         return ResponseEntity.noContent().build();

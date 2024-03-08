@@ -47,7 +47,7 @@ public class UserControllerTest {
   @MockBean
   private UserService userService;
 
-  // THIS TEST (ALREADY EXISTING) CHECKS A QUERY OF ALL USERS (@GetMapping("/users")
+  // THIS TEST (ALREADY EXISTING) CHECKS WHETHER A QUERY OF ALL USERS (@GetMapping("/users") IS CARRIED OUT CORRECTLY
     @Test
   public void givenUsers_whenGetUsers_thenReturnJsonArray() throws Exception {
     // given
@@ -88,14 +88,15 @@ public class UserControllerTest {
     userPostDTO.setName("Test User");
     userPostDTO.setUsername("testUsername");
 
+    // NOTE TO MYSELF: Mockito.any() allows for flexible argument matching
     given(userService.createUser(Mockito.any())).willReturn(user);
 
-    // when/then -> do the request + validate the result
+    // Define method for simulating a POST request with correct registration input to "/users/registration" endpoint
     MockHttpServletRequestBuilder postRequest = post("/users/registration")
         .contentType(MediaType.APPLICATION_JSON)
         .content(asJsonString(userPostDTO));
 
-    // then
+    // Perform actual test by comparing expected (= mocked) and actual result
     mockMvc.perform(postRequest)
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id", is(user.getId().intValue())))
@@ -122,12 +123,12 @@ public class UserControllerTest {
         // Mock the behavior to return an existing user for the given input
         given(userService.createUser(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.CONFLICT, "User already exists"));
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a POST request with an already existing user to the "/users/registration" endpoint
         MockHttpServletRequestBuilder postRequest = post("/users/registration")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPostDTO));
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(postRequest)
                 .andExpect(status().isConflict()); // Expecting Conflict status
     }
@@ -150,12 +151,12 @@ public class UserControllerTest {
         // Mock the behavior for valid login credentials
         given(userService.checkLoginCredentials(Mockito.any())).willReturn(user);
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a POST request with correct login credentials to the "/users/login" endpoint
         MockHttpServletRequestBuilder postRequest = post("/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPostDTO));
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(postRequest)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(user.getId().intValue())))
@@ -175,12 +176,12 @@ public class UserControllerTest {
         // Mock the behavior for user not found
         given(userService.checkLoginCredentials(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a POST request with a non-existing user to the "/users/login" endpoint
         MockHttpServletRequestBuilder postRequest = post("/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPostDTO));
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(postRequest)
                 .andExpect(status().isNotFound());
     }
@@ -202,12 +203,12 @@ public class UserControllerTest {
         // Mock the behavior for wrong password
         given(userService.checkLoginCredentials(Mockito.any())).willThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password"));
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a POST request with incorrect login credentials to the "/users/login" endpoint
         MockHttpServletRequestBuilder postRequest = post("/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPostDTO));
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(postRequest)
                 .andExpect(status().isUnauthorized());
     }
@@ -226,11 +227,11 @@ public class UserControllerTest {
         // Mock the behavior to return the user for the given ID
         given(userService.getUserById(1L)).willReturn(user);
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a GET request to the "/users/{id}" endpoint
         MockHttpServletRequestBuilder getRequest = get("/users/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON);
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(getRequest)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(user.getId().intValue())))
@@ -249,11 +250,11 @@ public class UserControllerTest {
         given(userService.getUserById(nonExistingUserId))
                 .willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a GET request with a non-existing user to the "/users/{id}" endpoint
         MockHttpServletRequestBuilder getRequest = get("/users/{id}", nonExistingUserId)
                 .contentType(MediaType.APPLICATION_JSON);
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(getRequest)
                 .andExpect(status().isNotFound());
     }
@@ -280,16 +281,14 @@ public class UserControllerTest {
         // Mock the behavior to return the updated user after the update
         given(userService.updateUser(Mockito.any())).willReturn(existingUser);
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a PUT request for updating an existing user to the "/users/{id}" endpoint
         MockHttpServletRequestBuilder putRequest = put("/users/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPutDTO));
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(putRequest)
                 .andExpect(status().isNoContent());
-
-        // Additional assertions can be added to check the updated user properties in the database
     }
 
     @Test
@@ -304,12 +303,12 @@ public class UserControllerTest {
         // Mock the behavior to return null for a non-existing user
         given(userService.getUserById(1L)).willReturn(null);
 
-        // when/then -> do the request + validate the result
+        // Define method for simulating a PUT request for updating a non-existing user to the "/users/{id}" endpoint
         MockHttpServletRequestBuilder putRequest = put("/users/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(userPutDTO));
 
-        // then
+        // Perform actual test by comparing expected (= mocked) and actual result
         mockMvc.perform(putRequest)
                 .andExpect(status().isNotFound());
     }
